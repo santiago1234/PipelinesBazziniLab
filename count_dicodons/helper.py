@@ -45,7 +45,7 @@ def write_counts_to_file(seq_id, dna, file_to_writte):
     counts = [counts[x] for x in generate_dicodones()]
     seq_len = len(dna)
     with open(file_to_writte, "a") as myfile:
-        myfile.write(seq_id + '\t')
+        myfile.write(seq_id)
         myfile.write('\t' + str(seq_len) + '\t')
         myfile.write('\t'.join([str(x) for x in counts]))
         myfile.write('\n')
