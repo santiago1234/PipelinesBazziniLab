@@ -1,6 +1,5 @@
 import subprocess
 import luigi
-import os
 
 
 # initialize parameters ---------------------------------------------------
@@ -19,13 +18,6 @@ def run_cmd(cmd):
     ret_code = p.wait()
     output =  p.communicate()[0]
     return output
-
-def run_cutadapt(adapter, fastq_file):
-    """
-    Runs the cuatdapt shell command
-    """
-    return run_cmd(["cutadapt", "-g", adapter, fastq_file])
-
 
 ##.......................... PIPELINE ...................................## 
 
@@ -47,7 +39,7 @@ class FastQC(luigi.Task):
         shell_run = ' '.join(x for x in ['fastqc', self.r1, self.r2, '-o', OUT_PREFIX])
         subprocess.call(shell_run, shell = True)
         with self.output().open('w') as fastqc:
-            fastqc.write('job completed!!')
+            fastqc.write('fastqc was run with the following parameters:\n %s' % shell_run)
 
 
 class RemoveAdapters(luigi.Task):
@@ -62,17 +54,15 @@ class RemoveAdapters(luigi.Task):
         yield FastQC(r1 = self.r1, r2 = self.r2)
 
     def output(self):
-        return [luigi.LocalTarget(OUT_PREFIX + "r1.fq"),
-                luigi.LocalTarget(OUT_PREFIX + "r2.fq")]
+        return luigi.LocalTarget(OUT_PREFIX + 'cutadapt.log')
 
     def run(self):
-        r1_trimmed = run_cutadapt(adapter_r1, self.r1)
-        with self.output()[0].open('w') as cutadapt_out:
-            cutadapt_out.write(r1_trimmed)
-
-        r2_trimmed = run_cutadapt(adapter_r2, self.r2)
-        with self.output()[1].open('w') as cutadapt_out:
-            cutadapt_out.write(r2_trimmed)
+        shell_run_1 = ' '.join(['cutadapt', '-g', adapter_r1, self.r1, '-o', OUT_PREFIX + 'r1_trimmed.fq'])
+        shell_run_2 = ' '.join(['cutadapt', '-g', adapter_r2, self.r2, '-o', OUT_PREFIX + 'r2_trimmed.fq'])
+        subprocess.call(shell_run_1, shell = True)
+        subprocess.call(shell_run_2, shell = True)
+        with self.output().open('w') as cutadapt:
+            cutadapt.write('cutadapt was run with the following params: \n %s \n %s' % (shell_run_1, shell_run_2))
 
 
 class BuiltIndex(luigi.Task):
@@ -95,6 +85,29 @@ class BuiltIndex(luigi.Task):
         print("INDEX BUILT")
 
 
+class Bowtie2Mapping(luigi.Task):
+    """"
+    maps the trimmed reads to the transcriptome
+    """
+
+    def requires(self):
+        return [BuiltIndex(), RemoveAdapters()]
+
+    def output(self):
+        return luigi.LocalTarget(OUT_PREFIX + 'bowtie2.log')
+
+    def run(self):
+        bowtie_params = ['bowtie2', '-k 1', '--local', '--no-mixed', '--no-discordant', '--no-overlap', '--no-unal',
+                        '-I 200', '-X 800', '-x data/transcriptome/zfish', '-1', OUT_PREFIX + 'r1_trimmed.fq',
+                        '-2', OUT_PREFIX + 'r2_trimmed.fq', '-S', OUT_PREFIX + 'aligment.sam']
+
+        shell_run = ' '.join(_ for _ in bowtie_params)
+        subprocess.call(shell_run, shell = True)
+        print('runing on shell: %s' % shell_run)
+        with self.output().open('w') as bowtie2:
+            bowtie2.write('bowtie2 was run with the following params: \n %s' % shell_run)
+
+
 class RunAll(luigi.task.WrapperTask):
     """
     run the compleate pipeline
@@ -104,8 +117,7 @@ class RunAll(luigi.task.WrapperTask):
 
     def requires(self):
         yield RemoveAdapters(r1 = self.r1, r2 = self.r2)
-        yield BuiltIndex()
-
+        yield Bowtie2Mapping()
 
 # run pipeline ------------------------------------------------------------
 
