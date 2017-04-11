@@ -11,15 +11,6 @@ adapter_r2 = "CTAGCTACCTA"
 reference_transcriptome = "data/transcriptome/zfish"
 
 
-# run command line --------------------------------------------------------
-
-def run_cmd(cmd):
-    p = subprocess.Popen(cmd, shell = False, universal_newlines = True,
-                        stdout = subprocess.PIPE)
-    ret_code = p.wait()
-    output =  p.communicate()[0]
-    return output
-
 ##.......................... PIPELINE ...................................## 
 
 
@@ -78,7 +69,7 @@ class BuiltIndex(luigi.Task):
         return [luigi.LocalTarget(OUT_PREFIX + 'index.log')]
 
     def run(self):
-        shell_run = 'bowtie2-build --threads 4 data/transcriptome/Zebrafish.fasta' + " " + reference_transcriptome
+        shell_run = 'bowtie-build  data/transcriptome/Zebrafish.fasta' + " " + reference_transcriptome
         print("runing on shell: %s" % shell_run)
         subprocess.call(shell_run, shell = True)
         with self.output()[0].open('w') as index:
@@ -86,7 +77,7 @@ class BuiltIndex(luigi.Task):
         print("INDEX BUILT")
 
 
-class Bowtie2Mapping(luigi.Task):
+class BowtieMapping(luigi.Task):
     """"
     maps the trimmed reads to the transcriptome
     """
@@ -96,41 +87,59 @@ class Bowtie2Mapping(luigi.Task):
         return [BuiltIndex(), RemoveAdapters(r1 = self.r1, r2 = self.r2)]
 
     def output(self):
-        return luigi.LocalTarget(OUT_PREFIX + FILE_PREFIX +  'bowtie2.log')
+        return luigi.LocalTarget(OUT_PREFIX + FILE_PREFIX +  'bowtie.log')
 
     def run(self):
-        bowtie_params = ['bowtie2', '-k 1', '--local', '--no-mixed',
-                        '--no-discordant', '--no-overlap', '--no-unal',
-                        '--threads 4',
-                        '-I 200', '-X 800', '-x data/transcriptome/zfish',
+
+        out_bam_file = OUT_PREFIX + FILE_PREFIX +  'aligment.sam'
+        bowtie_params = ['bowtie',
+                        '-n 2', # allow a maximum of 2 mistmaches
+                        '--seedlen 10', # seed length
+                        '-I 200',
+                        '-X 800',
+                        '--threads 20',
+                        reference_transcriptome,
                         '-1', OUT_PREFIX + FILE_PREFIX +  'r1_trimmed.fq',
                         '-2', OUT_PREFIX + FILE_PREFIX +  'r2_trimmed.fq',
-                        '-S', OUT_PREFIX + FILE_PREFIX +  'aligment.sam',
-                        '--rg-id ' + FILE_PREFIX]
+                        '-S', out_bam_file
+                        ]
 
-        # map with bowtie2
+        # map with bowtie
+ 
         print('mapping ...')
         map_bowtie = ' '.join(_ for _ in bowtie_params)
         subprocess.call(map_bowtie, shell = True)
 
-        # convert also to bam format
-        print('converting sam to bam ...')
-        bam_out_file = OUT_PREFIX + FILE_PREFIX + "aligment.bam"
-        shell_sam_to_bam = "samtools view -b " + OUT_PREFIX + FILE_PREFIX + 'aligment.sam' + " > " + bam_out_file
-        subprocess.call(shell_sam_to_bam, shell = True)
+        # mapping statistics
+        print('computing mapping stats ...')
+        samtools_stats = ['samtools',
+                         'flagstat',
+                         out_bam_file,
+                         '>',
+                         OUT_PREFIX + FILE_PREFIX + "alg.stats"]
+        samtools_stats = ' '.join(_ for _ in samtools_stats)
+        subprocess.call(samtools_stats, shell = True)
 
-        # sort bam
-        print('sorting bam file ...')
-        sort_bam = 'samtools sort -m 5G -@ 4 ' + bam_out_file + ' > ' + bam_out_file
-        subprocess.call(sort_bam, shell = True)
+        # filter mapped reads, sort
+        print('filtering and sorting ...')
+        filter_sort = ['samtools view',
+                      '-f 0x02',
+                      '-Sb', out_bam_file,
+                      '|',
+                      'samtools sort',
+                      '-m 6G -@ 4',
+                      '-o', OUT_PREFIX + FILE_PREFIX + 'alg_sorted.bam'
+                      ]
 
-        # index
-        print('indexing bam file ...')
-        index_bam = 'samtools index ' + bam_out_file 
-        subprocess.call(index_bam, shell = True)
+        filter_sort = ' '.join(_ for _ in filter_sort)
+        subprocess.call(filter_sort, shell = True)
 
         with self.output().open('w') as bowtie2:
-            bowtie2.write('bowtie2 was run with the following params: \n %s\n %s\n %s\n %s' % (map_bowtie, shell_sam_to_bam, sort_bam, index_bam))
+            bowtie2.write('bowtie2 was run with the following params: \n %s\n %s\n %s' % (
+                         map_bowtie, samtools_stats, filter_sort
+                         ))
+
+
 
 
 class RunAll(luigi.task.WrapperTask):
