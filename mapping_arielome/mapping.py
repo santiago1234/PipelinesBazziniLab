@@ -1,3 +1,4 @@
+import os
 import subprocess
 import luigi
 
@@ -139,18 +140,57 @@ class BowtieMapping(luigi.Task):
                          map_bowtie, samtools_stats, filter_sort
                          ))
 
-
-
-
-class RunAll(luigi.task.WrapperTask):
+class ExtractSeqs(luigi.Task):
     """
-    run the compleate pipeline
+    extract the sequences of the mapped reads form the transcriptome
     """
     r1 = luigi.Parameter()
     r2 = luigi.Parameter()
+    genome = luigi.Parameter()
 
     def requires(self):
-        yield Bowtie2Mapping(r1 = self.r1, r2 = self.r2)
+        return BowtieMapping(r1 = self.r1, r2 = self.r2)
+
+    def output(sef):
+        return luigi.LocalTarget(OUT_PREFIX + FILE_PREFIX + 'extract_seq.log')
+
+    def run(self):
+        bam_target = OUT_PREFIX + FILE_PREFIX + 'alg_sorted.bam'
+
+        if not os.path.isfile(bam_target):
+            raise NameError('target bam file not found')
+
+        # conver to bed format, cut the columns containing the
+        # name of the chromosome, start aligment, end aligment,
+        # read name
+        print('bam to bed running ...')
+        bam_to_bed = ['bamToBed -bedpe',
+                     '-mate1',
+                     '-bed12',
+                     '-i', bam_target,
+                     '|',
+                     'cut',
+                     '-f 1,2,6,7',
+                     '>', OUT_PREFIX + FILE_PREFIX + '.bed'
+                     ]
+        bam_to_bed = ' '.join(_ for _ in bam_to_bed)
+        subprocess.call(bam_to_bed, shell = True)
+
+        # get fasta seqs
+        print('extracting seqs of mapping reads ...')
+        get_seqs = [
+                   'bedtools getfasta',
+                   '-fi', self.genome,
+                   '-bed', OUT_PREFIX + FILE_PREFIX + '.bed',
+                   '-name',
+                   '>', OUT_PREFIX + FILE_PREFIX + 'seqs.fasta'
+                   ]
+        get_seqs = ' '.join(_ for _ in get_seqs)
+        subprocess.call(get_seqs, shell = True)
+        with self.output().open('w') as getseqs:
+            getseqs.write(' %s\n %s/n' % (bam_to_bed, get_seqs))
+
+
 
 # run pipeline ------------------------------------------------------------
 
