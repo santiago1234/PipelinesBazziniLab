@@ -1,0 +1,7 @@
+# barcodes for multispecies in R1
+# this barcodes should only be used for the sppliting process
+fish TCTAACGGCGAAATG
+fly CGCTGCATTGAGGTG
+pombe GTGGTTACCGACAAT
+planaria AAACCGTTTCATCAT
+minigene CCTGCAGGCACCATG
