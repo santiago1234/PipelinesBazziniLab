@@ -11,7 +11,7 @@ import subprocess
 # variables ---------------------------------------------------------------
 
 
-out_fastq = {
+fastq_files = {
             'fish': ('fish_01.fq', 'fish_02.fq'),
             'fly': ('fly_01.fq', 'fly_02.fq'),
             'minigene': ('minigene_01.fq', 'minigene_02.fq'),
@@ -20,7 +20,7 @@ out_fastq = {
             }
 
 
-
+adapters = {}
 # functions ---------------------------------------------------------------
 # #### --------------------------------------------------------------------
 
@@ -69,9 +69,9 @@ def get_r2_from_subset(R2, out_prefix_dir):
                       ]
         return ' '.join(_ for _ in command_line)
 
-    for specie in out_fastq:
+    for specie in fastq_files:
         # check if file exist
-        if not os.path.isfile(out_prefix_dir + out_fastq[specie][0]):
-            raise NameError('file: %s not found' % out_fastq[specie][0])
-        yield get_r2_command(out_fastq[specie][0], out_fastq[specie][1])
+        if not os.path.isfile(out_prefix_dir + fastq_files[specie][0]):
+            raise NameError('file: %s not found' % fastq_files[specie][0])
+        yield get_r2_command(fastq_files[specie][0], fastq_files[specie][1])
 
