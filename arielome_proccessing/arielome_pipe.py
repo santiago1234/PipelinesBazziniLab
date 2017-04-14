@@ -106,6 +106,29 @@ class RemoveAdapters(luigi.Task):
             cutadapt.write(run_cutadapt)
 
 
+class CollapseMiniGenes(luigi.Task):
+    """
+    collapse the minigenes
+    """
+
+    def requires(self):
+        return RemoveAdapters()
+
+    def output(self):
+        return luigi.LocalTarget(GlobalConfig().outdir + 'collapse_minigenes.log')
+
+    def run(self):
+        print('collapsing minigenes ...')
+        collapse = helper.collapse_minigenes(GlobalConfig().outdir)
+        subprocess.call(collapse[0], shell = True) #collapse r1
+        subprocess.call(collapse[1], shell = True) #collapse r2
+
+        with self.output().open('w') as fastx_collapse:
+            fastx_collapse.write(collapse[0] + '\n' + collapse[1])
+
+
+
+
 
 if __name__ == '__main__':
     luigi.run()

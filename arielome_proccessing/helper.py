@@ -137,3 +137,38 @@ def remove_adapters(out_prefix_dir):
         commands_to_run.append(remove_adapter_cmd(specie)[1])
  
     return commands_to_run
+
+
+# collapse minigenes ------------------------------------------------------
+
+def collapse_minigenes(out_prefix_dir):
+    """Collapses the minigenes
+
+    Collapses the trimmer minigenes with FASTA/Q Collapser
+
+    Args:
+        out_prefix_dir: a direcoty indicating where the files are located.
+
+    Returns:
+        the command to run the collapser
+
+    Raises:
+        NameError: An error ocurrer when the input fastq files are not present
+    """
+
+    [check_file(out_prefix_dir + trimmed_fastq["minigene"][i]) for i in (0, 1)]
+    collapse_r1 = [
+                  "fastx_collapser -v",
+                  "-i", out_prefix_dir + trimmed_fastq["minigene"][0],
+                  "-o", out_prefix_dir + "minigene_r1_collased.fq"
+                  ]
+    collapse_r2 = [
+                  "fastx_collapser -v",
+                  "-i", out_prefix_dir + trimmed_fastq["minigene"][1],
+                  "-o", out_prefix_dir + "minigene_r2_collased.fq"
+                  ]
+    return (
+           ' '.join(_ for _ in collapse_r1),
+           ' '.join(_ for _ in collapse_r2)
+           )
+
