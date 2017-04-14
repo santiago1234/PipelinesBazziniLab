@@ -79,7 +79,32 @@ class BarcodeSpliting(luigi.Task):
             barsplit.write(get_mate)
 
 class RemoveAdapters(luigi.Task):
-    pass
+    """
+    remove adapters task
+    """
+
+    def requires(self):
+        return BarcodeSpliting()
+
+    def output(self):
+        return luigi.LocalTarget(GlobalConfig().outdir + 'barcode_trimming.log')
+
+    def run(self):
+        cutadpat_cmd = helper.remove_adapters(GlobalConfig().outdir)
+        commands_to_run = open(GlobalConfig().outdir + "RemoveAdapters.exe", 'w')
+        for cmd in cutadpat_cmd:
+            print("runing: %s ..." % cmd)
+            commands_to_run.write(cmd)
+            commands_to_run.write("\n")
+        commands_to_run.close()
+
+        run_cutadapt = "cat" + " " + GlobalConfig().outdir + "RemoveAdapters.exe" + " | " + "parallel"
+        subprocess.call(run_cutadapt, shell = True)
+
+
+        with self.output().open('w') as cutadapt:
+            cutadapt.write(run_cutadapt)
+
 
 
 if __name__ == '__main__':

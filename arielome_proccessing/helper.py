@@ -20,7 +20,23 @@ fastq_files = {
             }
 
 
-adapters = {}
+adapters = {
+           "fish": ("TCTAACGGCGAAATGGC", "TTAGTCACCTA"),
+           "fly": ("CGCTGCATTGAGGTGCCATGGC", "ACTAGTTAGTCA"),
+           "pombe": ("GTGGTTACCGACAATGGC", "CGGTCAGCTACTTA"),
+           "planaria": ("AAACCGTTTCATCATGGC", "CGGTCAGCTACTTA"),
+           "minigene": ("CCTGCAGGCACCATG", "CTA")
+           }
+
+trimmed_fastq = {
+                "fish": ("fish_01_trimmed.fq", "fish_02_trimmed.fq"),
+                "fly": ("fly_01_trimmed.fq", "fly_02_trimmed.fq"),
+                "minigene" :("minigene_01_trimmed.fq", "minigene_02_trimmed.fq"),
+                "planaria": ("planaria_01_trimmed.fq", "planaria_02_trimmed.fq"),
+                "pombe": ("pombe_01_trimmed.fq", "pombe_02_trimmed.fq")
+                }
+
+
 # functions ---------------------------------------------------------------
 # #### --------------------------------------------------------------------
 
@@ -75,3 +91,49 @@ def get_r2_from_subset(R2, out_prefix_dir):
             raise NameError('file: %s not found' % fastq_files[specie][0])
         yield get_r2_command(fastq_files[specie][0], fastq_files[specie][1])
 
+
+
+# RemoveAdapters ----------------------------------------------------------
+
+def remove_adapters(out_prefix_dir):
+    """Removes adapters from fastq
+
+    Removes the adpaters for each specie in the 5' position
+    using the cutadapt software
+
+    Args:
+        out_prefix_dir: a direcoty indicating where the files are located.
+
+    Returns:
+        a list where each element is the command to run in the pipeline
+
+     Raises:
+        NameError: An error ocurrer when the input fastq files are not present
+    """
+
+    def remove_adapter_cmd(specie):
+        check_file(out_prefix_dir + fastq_files[specie][0])
+        remove_from_r1 = ['cutadapt -g',
+                         adapters[specie][0],
+                         out_prefix_dir + fastq_files[specie][0],
+                         '-o', out_prefix_dir + trimmed_fastq[specie][0]
+                         ]
+
+        check_file(out_prefix_dir + fastq_files[specie][0])
+        remove_from_r2 = [
+                         'cutadapt -g',
+                         adapters[specie][1],
+                         out_prefix_dir + fastq_files[specie][1],
+                         '-o', out_prefix_dir + trimmed_fastq[specie][1]
+                         ]
+        return (
+               ' '.join(_ for _ in remove_from_r1),
+               ' '.join(_ for _ in remove_from_r2)
+               )
+
+    commands_to_run = []
+    for specie in trimmed_fastq:
+        commands_to_run.append(remove_adapter_cmd(specie)[0])
+        commands_to_run.append(remove_adapter_cmd(specie)[1])
+ 
+    return commands_to_run
