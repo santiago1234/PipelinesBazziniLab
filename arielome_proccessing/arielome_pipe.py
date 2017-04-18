@@ -128,6 +128,33 @@ class CollapseMiniGenes(luigi.Task):
 
 
 
+class QuantifyMinigenes(luigi.Task):
+    """
+    quantify the minigenes with fake minigene barcod,
+    only reads R1 will be used
+    """
+
+    def requires(self):
+        return RemoveAdapters()
+
+    def output(self):
+        return luigi.LocalTarget(GlobalConfig().outdir + "quantify_minigenes.log")
+
+    def run(self):
+        print('computing minigene counts ...')
+
+        quantify = helper.quantify_minigenes(GlobalConfig().outdir)
+        subprocess.call(quantify[0], shell = True)
+        subprocess.call(quantify[1], shell = True)
+
+        with self.output().open('w') as counts:
+            counts.write(quantify[0])
+            counts.write('\n')
+            counts.write(quantify[1])
+        counts.close()
+
+        print("task completed!!!")
+
 
 
 if __name__ == '__main__':
