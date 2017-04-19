@@ -28,6 +28,7 @@ adapters = {
            "minigene": ("CCTGCAGGCACCATG", "CTA")
            }
 
+
 trimmed_fastq = {
                 "fish": ("fish_01_trimmed.fq", "fish_02_trimmed.fq"),
                 "fly": ("fly_01_trimmed.fq", "fly_02_trimmed.fq"),
@@ -35,6 +36,21 @@ trimmed_fastq = {
                 "planaria": ("planaria_01_trimmed.fq", "planaria_02_trimmed.fq"),
                 "pombe": ("pombe_01_trimmed.fq", "pombe_02_trimmed.fq")
                 }
+
+
+references = {
+             "fish": "data/transcriptome_references/fish",
+             "fly": "data/transcriptome_references/fly",
+             "planaria": "data/transcriptome_references/planaria",
+             "pombe": "data/transcriptome_references/pombe"
+             }
+
+bam_files = {
+            "fish": ("fish.bam", "fish_filter.bam", "fish.bed"),
+            "fly": ("fly.bam", "fly_filter.bam", "fly.bed"),
+            "planaria": ("planaria.bam", "planaria_filter.bam", "planaria.bed"),
+            "pombe": ("pombe.bam", "pombe_filter.bam", "pombe.bed")
+            }
 
 
 # functions ---------------------------------------------------------------
@@ -48,6 +64,8 @@ def check_file(file_name):
     """
     if not os.path.isfile(file_name):
         raise NameError('file: %s not found' % file_name)
+    if os.stat(file_name).st_size == 0:
+        raise NameError('file: %s is empty' % file_name)
 
 
 # BarcodeSpliting ---------------------------------------------------------
@@ -188,7 +206,7 @@ def quantify_minigenes(out_prefix_dir):
         str, the command line to compute the counts
 
     Raises:
-        NameError: An error ocurrer when the input fastq files are not present
+        NameError: An error ocurrer when the input file is not present
     """
 
     minigene_file = out_prefix_dir + "minigene_01_trimmed.fq"
@@ -210,5 +228,109 @@ def quantify_minigenes(out_prefix_dir):
            ' '.join(_ for _ in cuantify_minigenes),
            ' '.join(_ for _ in rm_files)
            )
+
+
+# mapping -----------------------------------------------------------------
+
+def mapping_bowtie(out_prefix_dir):
+    """Maps reads to transcriptome
+
+    Maps each of the species reads to its corresponding transcriptome
+
+    Args:
+        out_prefix_dir: a direcoty indicating where the trimmed fastq files are found
+
+    Returns:
+        iterator with the commands to run
+
+    Raises:
+        NameError: An error ocurrer when the input fastq files are not present
+    """
+
+    def bowtie_run(specie):
+        r1 = out_prefix_dir + trimmed_fastq[specie][0]
+        r2 = out_prefix_dir + trimmed_fastq[specie][1]
+        reference = references[specie]
+        check_file(r1)
+        check_file(r2)
+        out_bam = out_prefix_dir + specie + ".bam"
+        bowtie_params = [
+                        "bowtie",
+                        "-n 1", # maximum two mistmaches
+                        "--seedlen 10",
+                        "-I 200",
+                        "-X 800",
+                        "--threads 10",
+                        reference,
+                        "-1", r1,
+                        "-2", r2,
+                        "-S", out_bam
+                        ]
+        return ' '.join(_ for _ in bowtie_params)
+
+    for spe in ["fish", "fly", "pombe", "planaria"]:
+        yield bowtie_run(spe)
+
+
+def filter_mapped_reads(out_prefix_dir):
+    """filter mapped reads from bam
+
+    Filters the mapped reads with samtools flags
+
+    Args:
+        out_prefix_dir: a direcoty indicating where the bam files are found
+
+    Returns:
+        iterator with the commands to run
+    """
+
+    def filter_bam(specie):
+        input_bam = out_prefix_dir + bam_files[specie][0]
+        out_bam = out_prefix_dir + bam_files[specie][1]
+        check_file(input_bam)
+        filter_mapped = [
+                        'samtools view',
+                        '-f 0x02',
+                        '-Sb',
+                        input_bam,
+                        '>',
+                        out_bam
+                        ]
+        return ' '.join(_ for _ in filter_mapped)
+
+    for specie in bam_files:
+        yield filter_bam(specie)
+
+
+# ExtractSeqs -------------------------------------------------------------
+
+def to_bed(out_prefix_dir):
+    """converts to bed formato
+
+    filtered bam to bed
+    """
+    def bam_to_bed(specie):
+        filter_bam = out_prefix_dir + bam_files[specie][1]
+        check_file(filter_bam)
+        bed_file = out_prefix_dir + bam_files[specie][2]
+
+        cmds = [
+               'bamToBed -bedpe',
+               '-mate1',
+               '-bed12',
+               '-i', filter_bam,
+               '|',
+               'cut',
+               '-f 1,2,6,7',
+               '>', bed_file
+               ]
+
+        return ' '.join(_ for _ in cmds)
+
+    for specie in bam_files:
+       yield bam_to_bed(specie) 
+
+
+
 
 

@@ -78,6 +78,7 @@ class BarcodeSpliting(luigi.Task):
             barsplit.write(barcode_r1 + '\n')
             barsplit.write(get_mate)
 
+
 class RemoveAdapters(luigi.Task):
     """
     remove adapters task
@@ -127,7 +128,6 @@ class CollapseMiniGenes(luigi.Task):
             fastx_collapse.write(collapse[0] + '\n' + collapse[1])
 
 
-
 class QuantifyMinigenes(luigi.Task):
     """
     quantify the minigenes with fake minigene barcod,
@@ -156,6 +156,52 @@ class QuantifyMinigenes(luigi.Task):
         print("task completed!!!")
 
 
+class Mapping(luigi.Task):
+    """
+    map the trimmed fastq to their corresponfing transcriptome with bowtie
+    """
+
+    def requires(self):
+        return RemoveAdapters()
+
+    def output(self):
+        return luigi.LocalTarget(GlobalConfig().outdir + "bowtie_mapping.log")
+
+    def run(self):
+        print("mapping reads to transcriptome ...")
+        bowtie_run = helper.mapping_bowtie(GlobalConfig().outdir)
+        for cmd in bowtie_run:
+            print("runing bowtie ...")
+            subprocess.call(cmd, shell = True)
+
+        # filter bam file (only mapped reads)
+        for cmd in helper.filter_mapped_reads(GlobalConfig().outdir):
+            print("filtering mapped reads ...")
+            subprocess.call(cmd, shell = True)
+
+        with self.output().open("w") as bowtie:
+            bowtie.write("bowtie was run succesfully")
+
+
+class ExtractSeqs(luigi.Task):
+    """
+    extract the sequences of the mapped reads form the transcriptome
+    """
+
+    def requires(self):
+        return Mapping()
+
+    def output(self):
+        return luigi.LocalTarget(GlobalConfig().outdir + "extarct_seqs.log")
+
+    def run(self):
+        print("runing bam to bed ...")
+        for cmd in helper.to_bed(GlobalConfig().outdir):
+            print(cmd)
+            subprocess.call(cmd, shell = True)
+
+        with self.output().open('w') as extract:
+            extract.write('job completed')
 
 if __name__ == '__main__':
     luigi.run()
