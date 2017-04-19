@@ -1,0 +1,4 @@
+fish.fa filter=lfs diff=lfs merge=lfs -text
+fly.fa filter=lfs diff=lfs merge=lfs -text
+planaria.fa filter=lfs diff=lfs merge=lfs -text
+pombe.fa filter=lfs diff=lfs merge=lfs -text
