@@ -46,10 +46,10 @@ references = {
              }
 
 bam_files = {
-            "fish": ("fish.bam", "fish_filter.bam", "fish.bed"),
-            "fly": ("fly.bam", "fly_filter.bam", "fly.bed"),
-            "planaria": ("planaria.bam", "planaria_filter.bam", "planaria.bed"),
-            "pombe": ("pombe.bam", "pombe_filter.bam", "pombe.bed")
+            "fish": ("fish.bam", "fish_filter.bam", "fish.bed", "fish.fa"),
+            "fly": ("fly.bam", "fly_filter.bam", "fly.bed", "fly.fa"),
+            "planaria": ("planaria.bam", "planaria_filter.bam", "planaria.bed", "planaria.fa"),
+            "pombe": ("pombe.bam", "pombe_filter.bam", "pombe.bed", "pombe.fa")
             }
 
 
@@ -256,7 +256,7 @@ def mapping_bowtie(out_prefix_dir):
         out_bam = out_prefix_dir + specie + ".bam"
         bowtie_params = [
                         "bowtie",
-                        "-n 1", # maximum two mistmaches
+                        "-n 2", # maximum two mistmaches
                         "--seedlen 10",
                         "-I 200",
                         "-X 800",
@@ -328,7 +328,31 @@ def to_bed(out_prefix_dir):
         return ' '.join(_ for _ in cmds)
 
     for specie in bam_files:
-       yield bam_to_bed(specie) 
+       yield bam_to_bed(specie)
+
+
+def extract_seqs(out_prefix_dir):
+    """
+    extract the mapped reads form the transcriptome
+    """
+    def get_seq(specie):
+        transcriptome = references[specie] + ".fasta"
+        bed_file = out_prefix_dir + bam_files[specie][2]
+        out_fasta = out_prefix_dir + bam_files[specie][3]
+
+        cmd = [
+              'bedtools getfasta',
+              '-fi', transcriptome,
+              '-bed', bed_file,
+              '-name',
+              '>', out_fasta
+              ]
+        return ' '.join(_ for _ in cmd)
+
+    for specie in bam_files:
+        print(get_seq(specie))
+
+
 
 
 

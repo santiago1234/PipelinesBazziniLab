@@ -200,6 +200,12 @@ class ExtractSeqs(luigi.Task):
             print(cmd)
             subprocess.call(cmd, shell = True)
 
+        print("extracting sequences from transcriptome ...")
+        for cmd in helper.extract_seqs(GlobalConfig().outdir):
+            print(cmd)
+            subprocess.call(cmd, shell = True)
+
+
         with self.output().open('w') as extract:
             extract.write('job completed')
 
