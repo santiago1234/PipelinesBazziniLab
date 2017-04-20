@@ -174,10 +174,14 @@ class Mapping(luigi.Task):
             print("runing bowtie ...")
             subprocess.call(cmd, shell = True)
 
-        # filter bam file (only mapped reads)
+        # filter only properly mapped reads and sort bam
+        filter_reads = open(GlobalConfig().outdir + 'filter_and_sort.exe', 'w')
         for cmd in helper.filter_mapped_reads(GlobalConfig().outdir):
             print("filtering mapped reads ...")
-            subprocess.call(cmd, shell = True)
+            filter_reads.write(cmd)
+            filter_reads.write('\n')
+        run_sort_bam = 'cat ' + GlobalConfig().outdir + 'filter_and_sort.exe' + ' | parallel'
+        subprocess.call(run_sort_bam, shell = True)
 
         with self.output().open("w") as bowtie:
             bowtie.write("bowtie was run succesfully")
@@ -195,16 +199,24 @@ class ExtractSeqs(luigi.Task):
         return luigi.LocalTarget(GlobalConfig().outdir + "extarct_seqs.log")
 
     def run(self):
+
+        # convert bam to bed
         print("runing bam to bed ...")
+        to_bed_exe = open(GlobalConfig().outdir + 'to_bed.exe', 'w')
         for cmd in helper.to_bed(GlobalConfig().outdir):
             print(cmd)
-            subprocess.call(cmd, shell = True)
+            to_bed_exe.write(cmd + '\n')
+        conver_to_bed = 'cat ' + GlobalConfig().outdir + 'to_bed.exe' + ' | parallel'
+        subprocess.call(conver_to_bed, shell = True)
 
+        # extrac mapping sequences
         print("extracting sequences from transcriptome ...")
+        extract_exe = open(GlobalConfig().outdir + 'extract_seqs.exe', 'w')
         for cmd in helper.extract_seqs(GlobalConfig().outdir):
             print(cmd)
-            subprocess.call(cmd, shell = True)
-
+            extract_exe.write(cmd + '\n')
+        get_seqs = 'cat ' + GlobalConfig().outdir + 'extract_seqs.exe' + ' | parallel'
+        subprocess.call(get_seqs, shell = True)
 
         with self.output().open('w') as extract:
             extract.write('job completed')

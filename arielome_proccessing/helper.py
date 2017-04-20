@@ -46,12 +46,18 @@ references = {
              }
 
 bam_files = {
-            "fish": ("fish.bam", "fish_filter.bam", "fish.bed", "fish.fa"),
-            "fly": ("fly.bam", "fly_filter.bam", "fly.bed", "fly.fa"),
-            "planaria": ("planaria.bam", "planaria_filter.bam", "planaria.bed", "planaria.fa"),
-            "pombe": ("pombe.bam", "pombe_filter.bam", "pombe.bed", "pombe.fa")
+            "fish": ("fish.bam", "fish_filter.bam"),
+            "fly": ("fly.bam", "fly_filter.bam"),
+            "planaria": ("planaria.bam", "planaria_filter.bam"),
+            "pombe": ("pombe.bam", "pombe_filter.bam")
             }
 
+fasta_bed = {
+            "fish": ("fish.bed", "fish.fasta"),
+            "fly": ("fly.bed", "fly.fasta"),
+            "planaria": ("planaria.bed", "planaria.fasta"),
+            "pombe": ("pombe.bed", "pombe.fasta")
+            }
 
 # functions ---------------------------------------------------------------
 # #### --------------------------------------------------------------------
@@ -293,8 +299,10 @@ def filter_mapped_reads(out_prefix_dir):
                         '-f 0x02',
                         '-Sb',
                         input_bam,
-                        '>',
-                        out_bam
+                        '|',
+                        'samtools sort',
+                        '-m 6G -@ 4',
+                        '-o', out_bam
                         ]
         return ' '.join(_ for _ in filter_mapped)
 
@@ -302,8 +310,10 @@ def filter_mapped_reads(out_prefix_dir):
         yield filter_bam(specie)
 
 
+
 # ExtractSeqs -------------------------------------------------------------
 
+# some error here have to change the variables
 def to_bed(out_prefix_dir):
     """converts to bed formato
 
@@ -312,7 +322,7 @@ def to_bed(out_prefix_dir):
     def bam_to_bed(specie):
         filter_bam = out_prefix_dir + bam_files[specie][1]
         check_file(filter_bam)
-        bed_file = out_prefix_dir + bam_files[specie][2]
+        bed_file = out_prefix_dir + fasta_bed[specie][0]
 
         cmds = [
                'bamToBed -bedpe',
@@ -336,9 +346,11 @@ def extract_seqs(out_prefix_dir):
     extract the mapped reads form the transcriptome
     """
     def get_seq(specie):
-        transcriptome = references[specie] + ".fasta"
-        bed_file = out_prefix_dir + bam_files[specie][2]
-        out_fasta = out_prefix_dir + bam_files[specie][3]
+        transcriptome = references[specie] + ".fa"
+        check_file(transcriptome)
+        bed_file = out_prefix_dir + fasta_bed[specie][0]
+        check_file(bed_file)
+        out_fasta = out_prefix_dir + fasta_bed[specie][1]
 
         cmd = [
               'bedtools getfasta',
@@ -350,11 +362,6 @@ def extract_seqs(out_prefix_dir):
         return ' '.join(_ for _ in cmd)
 
     for specie in bam_files:
-        print(get_seq(specie))
-
-
-
-
-
+        yield get_seq(specie)
 
 
