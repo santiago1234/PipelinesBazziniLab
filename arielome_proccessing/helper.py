@@ -46,10 +46,10 @@ references = {
              }
 
 bam_files = {
-            "fish": ("fish.bam", "fish_filter.bam"),
-            "fly": ("fly.bam", "fly_filter.bam"),
-            "planaria": ("planaria.bam", "planaria_filter.bam"),
-            "pombe": ("pombe.bam", "pombe_filter.bam")
+            "fish": ("fish.sam", "fish_filter.bam"),
+            "fly": ("fly.sam", "fly_filter.bam"),
+            "planaria": ("planaria.sam", "planaria_filter.bam"),
+            "pombe": ("pombe.sam", "pombe_filter.bam")
             }
 
 fasta_bed = {
@@ -259,10 +259,10 @@ def mapping_bowtie(out_prefix_dir):
         reference = references[specie]
         check_file(r1)
         check_file(r2)
-        out_bam = out_prefix_dir + specie + ".bam"
+        out_sam = out_prefix_dir + bam_files[specie][0]
         bowtie_params = [
                         "bowtie",
-                        "-n 2", # maximum two mistmaches
+                        "-n 1", # maximum two mistmaches
                         "--seedlen 10",
                         "-I 200",
                         "-X 800",
@@ -270,7 +270,7 @@ def mapping_bowtie(out_prefix_dir):
                         reference,
                         "-1", r1,
                         "-2", r2,
-                        "-S", out_bam
+                        "-S", out_sam
                         ]
         return ' '.join(_ for _ in bowtie_params)
 
@@ -291,17 +291,16 @@ def filter_mapped_reads(out_prefix_dir):
     """
 
     def filter_bam(specie):
-        input_bam = out_prefix_dir + bam_files[specie][0]
+        input_sam = out_prefix_dir + bam_files[specie][0]
         out_bam = out_prefix_dir + bam_files[specie][1]
-        check_file(input_bam)
+        check_file(input_sam)
         filter_mapped = [
                         'samtools view',
                         '-f 0x02',
                         '-Sb',
-                        input_bam,
+                        input_sam,
                         '|',
-                        'samtools sort',
-                        '-m 6G -@ 4',
+                        'samtools sort -n',
                         '-o', out_bam
                         ]
         return ' '.join(_ for _ in filter_mapped)
@@ -332,6 +331,8 @@ def to_bed(out_prefix_dir):
                '|',
                'cut',
                '-f 1,2,6,7',
+               '|',
+               "awk '$2<$3 {print ;}'",
                '>', bed_file
                ]
 
