@@ -198,8 +198,10 @@ class FilterAndSort(luigi.Task):
         for cmd in helper.filter_mapped_reads(GlobalConfig().outdir):
             print(cmd)
             filter_exe.write(cmd + '\n')
-            subprocess.call(cmd, shell = True)
-
+        filter_exe.close()
+        filter_cmd = 'cat ' + GlobalConfig().outdir + 'filter.exe' + ' | ' + 'parallel'
+        print('runing: %s ...' % filter_cmd)
+        subprocess.call(filter_cmd, shell = True)
         with self.output().open('w') as filter_sort:
             filter_sort.write('filer and run')
 
@@ -210,7 +212,7 @@ class ExtractSeqs(luigi.Task):
     """
 
     def requires(self):
-        return [Mapping(), QuantifyMinigenes()]
+        return [FilterAndSort(), QuantifyMinigenes()]
 
     def output(self):
         return luigi.LocalTarget(GlobalConfig().outdir + "extarct_seqs.log")
