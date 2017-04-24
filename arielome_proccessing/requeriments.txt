@@ -1,0 +1,16 @@
+# requeriments and dependencies
+
+# python modules
+python==3.3.1
+iluigi==2.3.0
+
+# command line programs
+fastx toolkit: fastx_barcode_splitter.pl, fastx_collapser
+bioawk: awk version 20110810
+seqtk 1.2-r101-dirty
+cutadapt 1.13
+bowtie 1.2
+samtools 1.3.1
+bedtools v2.26.0
+GNU parallel 20160922
+
