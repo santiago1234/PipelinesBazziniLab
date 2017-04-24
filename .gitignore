@@ -1,0 +1,2 @@
+# ignore transcriptome references for arielome pipeline
+data/transcriptome_references/*
