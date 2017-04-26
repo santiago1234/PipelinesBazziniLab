@@ -71,7 +71,7 @@ class BarcodeSpliting(luigi.Task):
             print("runing: %s ..."  % command_to_retrive)
         commands_to_run.close()
         get_mate = GlobalConfig().outdir + "RunGetMaete.exe"
-        get_mate = "cat" + " " + get_mate + " | " + "parallel"
+        get_mate = "cat" + " " + get_mate + " | " + "parallel --verbose"
         subprocess.call(get_mate, shell = True)
 
         with self.output().open('w') as barsplit:
@@ -99,7 +99,7 @@ class RemoveAdapters(luigi.Task):
             commands_to_run.write("\n")
         commands_to_run.close()
 
-        run_cutadapt = "cat" + " " + GlobalConfig().outdir + "RemoveAdapters.exe" + " | " + "parallel"
+        run_cutadapt = "cat" + " " + GlobalConfig().outdir + "RemoveAdapters.exe" + " | " + "parallel --verbose"
         subprocess.call(run_cutadapt, shell = True)
 
 
@@ -199,7 +199,7 @@ class FilterAndSort(luigi.Task):
             print(cmd)
             filter_exe.write(cmd + '\n')
         filter_exe.close()
-        filter_cmd = 'cat ' + GlobalConfig().outdir + 'filter.exe' + ' | ' + 'parallel'
+        filter_cmd = 'cat ' + GlobalConfig().outdir + 'filter.exe' + ' | ' + 'parallel --verbose'
         print('runing: %s ...' % filter_cmd)
         subprocess.call(filter_cmd, shell = True)
         with self.output().open('w') as filter_sort:
@@ -227,7 +227,7 @@ class ExtractSeqs(luigi.Task):
             to_bed_exe.write(cmd + '\n')
         to_bed_exe.close()
 
-        to_bed_cmd = 'cat ' + GlobalConfig().outdir + 'to_bed.exe' + ' | ' + 'parallel'
+        to_bed_cmd = 'cat ' + GlobalConfig().outdir + 'to_bed.exe' + ' | ' + 'parallel --verbose'
         subprocess.call(to_bed_cmd, shell = True)
 
         # extract seqs
@@ -237,7 +237,7 @@ class ExtractSeqs(luigi.Task):
         for cmd in helper.extract_seqs(GlobalConfig().outdir):
             extract.write(cmd + '\n')
         extract.close()
-        extract_cmd = 'cat ' + GlobalConfig().outdir + 'extract_seqs.exe' + ' | ' + 'parallel'
+        extract_cmd = 'cat ' + GlobalConfig().outdir + 'extract_seqs.exe' + ' | ' + 'parallel --verbose'
         subprocess.call(extract_cmd, shell = True)
 
         # put sequences in correct fram and format in tabular
