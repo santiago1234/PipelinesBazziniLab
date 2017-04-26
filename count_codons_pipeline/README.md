@@ -1,5 +1,10 @@
-Pilpeline for counting codons in random transcriptome libraries
-Bazzini lab
+## Count codons in arielome libraries
+
+*Bazzini lab*
+
+**Santiago Medina**
+
+:unamused:
 
 
 usage: sh 00-count_codons_pipeline.sh <input_file> <minimum_codon_length> <results_dir> <output_prefix>
