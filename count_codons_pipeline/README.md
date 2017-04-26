@@ -34,3 +34,11 @@ Returns:
 
 NOTE: all the transcrit sequences are assumed to be coding dna sequences and only the first open reading
       frame is used. python3 version is used.
+
+**IMPORTANT** input file should be fasta but in tabular format:
+
+```
+id_1	ATGCTAGCTAGCTGA
+id_2	ATGCGATTAGTGATCGA
+id_3	ATGCTGATGACATGA
+```
