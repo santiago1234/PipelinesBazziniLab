@@ -7,6 +7,7 @@ helper functions and variables for: arielome_pipe.py
 
 import os
 import subprocess
+from Bio import SeqIO
 
 # variables ---------------------------------------------------------------
 
@@ -53,10 +54,10 @@ bam_files = {
             }
 
 fasta_bed = {
-            "fish": ("fish.bed", "fish.fasta"),
-            "fly": ("fly.bed", "fly.fasta"),
-            "planaria": ("planaria.bed", "planaria.fasta"),
-            "pombe": ("pombe.bed", "pombe.fasta")
+            "fish": ("fish.bed", "fish.fasta", "fish.tab"),
+            "fly": ("fly.bed", "fly.fasta", "fly.tab"),
+            "planaria": ("planaria.bed", "planaria.fasta", "planaria.tab"),
+            "pombe": ("pombe.bed", "pombe.fasta", "pombe.tab")
             }
 
 # functions ---------------------------------------------------------------
@@ -366,3 +367,22 @@ def extract_seqs(out_prefix_dir):
         yield get_seq(specie)
 
 
+def format_in_frame(out_prefix_dir):
+    """
+    prints the sequence in tabular format and adds
+    the sequence ATGGC in order to be in frame
+    """
+    def format_seq(specie):
+        fasta_file = out_prefix_dir + fasta_bed[specie][1]
+        check_file(fasta_file)
+        fasta_tab = out_prefix_dir + fasta_bed[specie][2]
+        handle = open(fasta_tab, "w")
+        with open(fasta_file, "rU") as fasta:
+            for record in SeqIO.parse(fasta, "fasta"):
+                seq = str(record.id + "\t" + record.seq + "\n")
+                handle.write(seq)
+        handle.close()
+
+    for specie in fasta_bed:
+        print("formating %s ..." % specie)
+        format_seq(specie)

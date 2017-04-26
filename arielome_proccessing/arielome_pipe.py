@@ -240,9 +240,12 @@ class ExtractSeqs(luigi.Task):
         extract_cmd = 'cat ' + GlobalConfig().outdir + 'extract_seqs.exe' + ' | ' + 'parallel'
         subprocess.call(extract_cmd, shell = True)
 
+        # put sequences in correct fram and format in tabular
+        print("putting sequences in frame ...")
+        helper.format_in_frame(GlobalConfig().outdir)
+
         with self.output().open('w') as getseqs:
             getseqs.write('task completed!!')
-
 
 if __name__ == '__main__':
     luigi.run()
