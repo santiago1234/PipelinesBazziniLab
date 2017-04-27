@@ -379,7 +379,7 @@ def format_in_frame(out_prefix_dir):
         handle = open(fasta_tab, "w")
         with open(fasta_file, "rU") as fasta:
             for record in SeqIO.parse(fasta, "fasta"):
-                seq = str(record.id + "\t" + record.seq + "\n")
+                seq = str(record.id + "\t" + "ATGGC" + str(record.seq).upper() + "\n")
                 handle.write(seq)
         handle.close()
 
