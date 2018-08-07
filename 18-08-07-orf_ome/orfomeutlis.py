@@ -11,6 +11,8 @@ def sample_name(fq_file):
 def run_cutadapt(fqfile, adapter5, adapter3, outdir):
     """
     generates comand to run cut adapt
+    The 5’ adapter is removed if it occurs. If a 3’ adapter occurs, it is
+    removed only when also a 5’ adapter is present.
     """
     cmd = f"""cutadapt
     -j 15

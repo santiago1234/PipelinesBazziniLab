@@ -47,13 +47,54 @@ class TrimAdapters(luigi.Task):
         """
         run cutadapt to trim the adapters
         """
-        cutadapt_comand = utlis.run_cutadapt(
+        cutadapt_comand = utils.run_cutadapt(
             Params().inputFq,
             Params().adapter5,
             Params().adapter3,
-            utlis.sample_name(Params().inputFq)
+            utils.sample_name(Params().inputFq)
         )
         subprocess.call(cutadapt_comand, shell=True)
+
+
+class MakeIndex(luigi.Task):
+    """
+    builts a salmon index for the barcodes
+    NOTE: I set k = 5, since the barcodes are short.
+    """
+    def requires(self):
+        return list()
+
+    def output(self):
+        return luigi.LocalTarget('data/barcodes_index')
+
+    def run(self):
+        built_index = 'salmon index -t data/barcodes.fasta -i data/barcodes_index --type quasi -k 5'
+        subprocess.call(built_index, shell=True)
+
+
+class QuantifyReads(luigi.Task):
+    """
+    quantify the trimmed reads with salmon
+    """
+    def requires(self):
+        return [MakeIndex(), TrimAdapters()]
+
+    def output(self):
+        return luigi.LocalTarget(path.join(
+            utils.sample_name(Params().inputFq),
+            'quants'
+        ))
+
+    def run(self):
+        """
+        runs salmon
+        """
+        cmd = f"""
+        salmon quant -i data/barcodes_index
+        -l A -r {path.join(utils.sample_name(Params().inputFq),'trimed.fq')}
+        -o {path.join(utils.sample_name(Params().inputFq), 'quants')}
+        """.replace('\n', ' ')
+        subprocess.call(cmd, shell=True)
 
 
 
