@@ -6,6 +6,11 @@ import subprocess
 class Params(luigi.Config):
     """
     input parameters for the pipeline
+    Inputs:
+        inputFq: path to the fastq file to process
+        adapter5: 5' adapter
+        adapter3: 3' adapter
+        idprefix: prefix string for output file names
     """
     inputFq = luigi.Parameter()  # input fastq file
     adapter5 = luigi.Parameter()  # 5' adapter
@@ -16,6 +21,8 @@ class Params(luigi.Config):
 class TrimAdapters(luigi.Task):
     """
     trims the 3' and 5' adapter
+    The 5’ adapter is removed if it occurs. If a 3’ adapter occurs, it is
+    removed only when also a 5’ adapter is present.
     """
 
     def requires(self):
@@ -39,7 +46,7 @@ class TrimAdapters(luigi.Task):
 
 class RunQC(luigi.Task):
     """"
-    runs quality analysis
+    runs quality analysis in input fastq file
     """
 
     def requires(self):
