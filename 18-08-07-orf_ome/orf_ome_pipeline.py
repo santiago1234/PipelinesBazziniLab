@@ -44,22 +44,6 @@ class TrimAdapters(luigi.Task):
         subprocess.call(cutadapt_cmd, shell=True)
 
 
-class RunQC(luigi.Task):
-    """"
-    runs quality analysis in input fastq file
-    """
-
-    def requires(self):
-        return TrimAdapters()
-
-    def output(self):
-        return luigi.LocalTarget(Params().idprefix + '_fastqc.html')
-
-    def run(self):
-        qc_cmd = f"fastqc {Params().inputFq}"
-        subprocess.call(qc_cmd, shell=True)
-
-
 class MakeIndex(luigi.Task):
     """
     builts a salmon index for the barcodes
@@ -83,7 +67,7 @@ class QuantifyReads(luigi.Task):
     """
 
     def requires(self):
-        return [MakeIndex(), TrimAdapters(), RunQC()]
+        return [MakeIndex(), TrimAdapters()]
 
     def output(self):
         return luigi.LocalTarget(Params().idprefix + '-quants')
